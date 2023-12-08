@@ -37,20 +37,20 @@ namespace esphome
         {
           if (_supportProg)
           {
-            _remote.send_command(SomfyRemote::SomfyRemoteCommandProg, 10);
+            _remote.send_command(SomfyRemote::SomfyRemoteCommandProg, 5);
           }
           else
           {
-            _remote.send_command(SomfyRemote::SomfyRemoteCommandMy, 10);
+            _remote.send_command(SomfyRemote::SomfyRemoteCommandMy, 3);
           }
         }
         else if (call.get_position() == esphome::cover::COVER_OPEN)
         {
-          _remote.send_command(SomfyRemote::SomfyRemoteCommandUp, 10);
+          _remote.send_command(SomfyRemote::SomfyRemoteCommandUp, 3);
         }
         else if (call.get_position() == esphome::cover::COVER_CLOSED)
         {
-          _remote.send_command(SomfyRemote::SomfyRemoteCommandDown, 10);
+          _remote.send_command(SomfyRemote::SomfyRemoteCommandDown, 3);
         }
       }
 
