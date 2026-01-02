@@ -1,5 +1,7 @@
 #pragma once
 
+#include <list>
+#include <functional>
 #include <Arduino.h>
 
 #include "esphome/core/component.h"
@@ -27,7 +29,13 @@ namespace esphome
 {
   namespace rfm69
   {
-    static const char *const TAG = "rfm69";
+
+#define RFM_SENSOR_BUFFER_SIZE 16
+    struct QueuedPacket
+    {
+      uint8_t data[RFM_SENSOR_BUFFER_SIZE];
+      int len;
+    };
 
     class Rfm69 : public Component
     {
@@ -38,6 +46,7 @@ namespace esphome
       void xact(bool read, byte addr, byte buff[], byte len);
       void write_byte(byte addr, byte val);
       byte read_byte(byte addr);
+
       enum RfmMode
       {
         RfmModeStandby,
@@ -45,6 +54,12 @@ namespace esphome
         RfmModeRxOokContAsync,
         RfmModeTxOokContAsync,
         RfmModeTxOokPacket
+      };
+
+      enum RfmListenerProtocol
+      {
+        RfmListenerProtocolStandby,
+        RfmListenerProtocolAseer
       };
 
       enum RfmPeakThresholdType
@@ -55,8 +70,14 @@ namespace esphome
         RfmPeakThresholdTypeReserved
       };
 
+      bool add_radio_protocol_listener(RfmListenerProtocol protocol,
+                                       std::function<void(char *data, int len)> callback);
+      void loop() override;
+
+      void start_transmit_mode(RfmMode mode);
+      void end_transmit_mode();
+
       void set_mode(RfmMode mode);
-      void set_receiver_interrupt(void (*interrupt)(int state));
       void set_packet_format(bool var_len, int dc_free, bool crc, bool crc_auto_clear, int addr_filtering, int preamble_size);
       void set_packet_sync_off();
       void set_frequency(long freq);
@@ -71,6 +92,9 @@ namespace esphome
       bool is_packet_sent();
 
     private:
+      void resume_listening();
+
+      void resume_aseer_listening();
       void install_rx_interrupt();
 
       void byte_out(byte b);
@@ -81,6 +105,9 @@ namespace esphome
       int _pin_nss;
       int _pin_sck;
       int _pin_dio2;
+
+      RfmListenerProtocol _listenerProtocol;
+      std::list<std::function<void(char *data, int len)>> _listenerCallbacks;
 
       void (*_receiverInterrupt)(int state);
     };

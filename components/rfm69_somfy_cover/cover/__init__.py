@@ -1,10 +1,12 @@
-from esphome import pins
-import esphome.config_validation as cv
 import esphome.codegen as cg
-from esphome.const import CONF_ID, CONF_MISO_PIN, CONF_MOSI_PIN, CONF_CLK_PIN, CONF_CS_PIN
-from esphome.core import coroutine_with_priority
-from esphome.components.cover import register_cover, COVER_SCHEMA
+import esphome.config_validation as cv
+from esphome import pins
+from esphome.components.cover import cover_schema, register_cover
 from esphome.components.rfm69 import CONF_RFM69_ID, Rfm69
+from esphome.const import (CONF_CLK_PIN, CONF_CS_PIN, CONF_ID, CONF_MISO_PIN,
+                           CONF_MOSI_PIN)
+from esphome.core import coroutine_with_priority
+
 ns = cg.esphome_ns.namespace("rfm69_somfy_cover")
 
 RFM69SomfyCover = ns.class_("Rfm69SomfyCover", cg.Component)
@@ -12,7 +14,8 @@ RFM69SomfyCover = ns.class_("Rfm69SomfyCover", cg.Component)
 CONF_SUPPORT_PROG = "enable_prog"
 CONF_ADDRESS = "somfy_address"
 
-CONFIG_SCHEMA = COVER_SCHEMA.extend(
+
+CONFIG_SCHEMA = cover_schema(RFM69SomfyCover).extend(
     {
         cv.GenerateID(): cv.declare_id(RFM69SomfyCover),
         cv.Required(CONF_RFM69_ID): cv.use_id(Rfm69),

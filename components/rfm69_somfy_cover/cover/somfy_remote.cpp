@@ -132,7 +132,7 @@ namespace esphome
         _transmitter->set_tx_power_level(true, 31);
         _transmitter->set_packet_format(false, 0, false, true, 0, 0);
         _transmitter->set_packet_sync_off();
-        _transmitter->set_mode(Rfm69::RfmModeTxOokPacket);
+        _transmitter->start_transmit_mode(Rfm69::RfmModeTxOokPacket);
 
         ESP_LOGD(TAG, "Send command iteration %d: send packet len = %d", i, packet_len + 1);
         _transmitter->send_fixed_len_packet(packet, packet_len + 1);
@@ -152,7 +152,7 @@ namespace esphome
         ESP_LOGD(TAG, "Command send complete: %d delay iterations", delayIteration);
       }
 
-      _transmitter->set_mode(Rfm69::RfmModeStandby);
+      _transmitter->end_transmit_mode();
       ESP_LOGD(TAG, "Transmitter in standby");
 
       increment_rolling_code();

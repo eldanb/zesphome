@@ -1,12 +1,18 @@
 #include "rfm69.h"
+#include "aseer_radio_parser.h"
 #include "esphome/core/log.h"
 
 namespace esphome
 {
   namespace rfm69
   {
+
+    static const char *const TAG = "rfm69";
+
     static int __tracked_pin = 0;
     static void (*__installed_rx_interrupt_handler)(int state) = NULL;
+
+    static QueueHandle_t _pendingPacketsQueue = nullptr;
 
     void __rfm69_pin_interrupt()
     {
@@ -17,7 +23,8 @@ namespace esphome
                                                                                        _pin_mosi(pin_mosi),
                                                                                        _pin_nss(pin_nss),
                                                                                        _pin_sck(pin_sck),
-                                                                                       _pin_dio2(pin_dio2)
+                                                                                       _pin_dio2(pin_dio2),
+                                                                                       _listenerProtocol(RfmListenerProtocol::RfmListenerProtocolStandby)
     {
     }
 
@@ -31,6 +38,66 @@ namespace esphome
 
       digitalWrite(_pin_nss, HIGH);
       digitalWrite(_pin_sck, LOW);
+    }
+
+    bool Rfm69::add_radio_protocol_listener(RfmListenerProtocol protocol,
+                                            std::function<void(char *data, int len)> callback)
+    {
+      if (_listenerProtocol != RfmListenerProtocol::RfmListenerProtocolStandby)
+      {
+        ESP_LOGW(TAG, "RFM69 listener protocol already set");
+        return false;
+      }
+
+      _listenerProtocol = protocol;
+      _listenerCallbacks.push_back(callback);
+
+      resume_listening();
+
+      return true;
+    }
+
+    void Rfm69::resume_listening()
+    {
+      switch (_listenerProtocol)
+      {
+      case RfmListenerProtocol::RfmListenerProtocolAseer:
+        resume_aseer_listening();
+        break;
+
+      default:
+        set_mode(RfmMode::RfmModeStandby);
+        break;
+      }
+    }
+
+    void Rfm69::resume_aseer_listening()
+    {
+      if (!_pendingPacketsQueue)
+      {
+        _pendingPacketsQueue = xQueueCreate(4, sizeof(QueuedPacket));
+      }
+
+      aseer_set_output_queue(_pendingPacketsQueue);
+
+      set_frequency(433420000);
+      set_tx_lna_parameters(200, 1);
+      set_rx_bandwidth(2, 0, 0);
+      set_rx_noise_floor(20);
+      set_rx_peak_mode(Rfm69::RfmPeakThresholdTypePeak, 0, 0);
+
+      _receiverInterrupt = aseer_handle_state_interrupt;
+      set_mode(Rfm69::RfmModeRxOokContAsync);
+    }
+
+    void Rfm69::start_transmit_mode(RfmMode mode)
+    {
+      set_mode(mode);
+    }
+
+    void Rfm69::end_transmit_mode()
+    {
+      resume_listening();
     }
 
     void Rfm69::xact(bool read, byte addr, byte buff[], byte len)
@@ -110,9 +177,16 @@ namespace esphome
       }
     }
 
-    void Rfm69::set_receiver_interrupt(void (*interrupt)(int state))
+    void Rfm69::loop()
     {
-      _receiverInterrupt = interrupt;
+      QueuedPacket pendingBuffer;
+      while (xQueueReceive(_pendingPacketsQueue, &pendingBuffer, 0) == pdTRUE)
+      {
+        for (auto callback : _listenerCallbacks)
+        {
+          callback((char *)pendingBuffer.data, pendingBuffer.len);
+        }
+      }
     }
 
     void Rfm69::install_rx_interrupt()
