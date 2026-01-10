@@ -12,7 +12,7 @@ namespace esphome
     static int __tracked_pin = 0;
     static void (*__installed_rx_interrupt_handler)(int state) = NULL;
 
-    static QueueHandle_t _pendingPacketsQueue = nullptr;
+    static QueueHandle_t _pendingRxPacketsQueue = nullptr;
 
     void __rfm69_pin_interrupt()
     {
@@ -24,8 +24,10 @@ namespace esphome
                                                                                        _pin_nss(pin_nss),
                                                                                        _pin_sck(pin_sck),
                                                                                        _pin_dio2(pin_dio2),
-                                                                                       _listenerProtocol(RfmListenerProtocol::RfmListenerProtocolStandby)
+                                                                                       _listenerProtocol(RfmListenerProtocol::RfmListenerProtocolStandby),
+                                                                                       _sendInProgress(0)
     {
+      _pendingTxPacketsQueue = xQueueCreate(64, sizeof(QueuedTxPacket));
     }
 
     void Rfm69::setup()
@@ -38,6 +40,11 @@ namespace esphome
 
       digitalWrite(_pin_nss, HIGH);
       digitalWrite(_pin_sck, LOW);
+    }
+
+    void Rfm69::enqueue_tx_packet(const QueuedTxPacket &packet)
+    {
+      xQueueSendToBack(_pendingTxPacketsQueue, &packet, 0);
     }
 
     bool Rfm69::add_radio_protocol_listener(RfmListenerProtocol protocol,
@@ -73,12 +80,12 @@ namespace esphome
 
     void Rfm69::resume_aseer_listening()
     {
-      if (!_pendingPacketsQueue)
+      if (!_pendingRxPacketsQueue)
       {
-        _pendingPacketsQueue = xQueueCreate(4, sizeof(QueuedPacket));
+        _pendingRxPacketsQueue = xQueueCreate(4, sizeof(QueuedPacket));
       }
 
-      aseer_set_output_queue(_pendingPacketsQueue);
+      aseer_set_output_queue(_pendingRxPacketsQueue);
 
       set_frequency(433420000);
       set_tx_lna_parameters(200, 1);
@@ -180,13 +187,59 @@ namespace esphome
     void Rfm69::loop()
     {
       QueuedPacket pendingBuffer;
-      while (xQueueReceive(_pendingPacketsQueue, &pendingBuffer, 0) == pdTRUE)
+      while (xQueueReceive(_pendingRxPacketsQueue, &pendingBuffer, 0) == pdTRUE)
       {
         for (auto callback : _listenerCallbacks)
         {
           callback((char *)pendingBuffer.data, pendingBuffer.len);
         }
       }
+
+      if (_sendInProgress)
+      {
+        if (is_packet_sent() || _sendInProgress < millis() - 5000)
+        {
+          ESP_LOGD(TAG, "RFM69 transmit done");
+          _sendInProgress = false;
+          end_transmit_mode();
+        }
+      }
+
+      QueuedTxPacket pendingTxPacket;
+      if (!_sendInProgress && xQueueReceive(_pendingTxPacketsQueue, &pendingTxPacket, 0) == pdTRUE)
+      {
+        ESP_LOGD(TAG, "Got TX packet");
+        if (tx_queued_packet(&pendingTxPacket))
+        {
+          _sendInProgress = millis();
+        }
+      }
+    }
+
+    bool Rfm69::tx_queued_packet(QueuedTxPacket *packet)
+    {
+      ESP_LOGD(TAG, "RFM69 transmit packet type=%d", packet->type);
+
+      switch (packet->type)
+      {
+      case QueuedTxPacket::RFM_TX_PACKET_TYPE_FIXED_LEN_RAW_OOK:
+        set_bitrate(packet->bitRate);
+        set_frequency(packet->frequency);
+        set_tx_power_level(true, 31);
+        set_packet_format(false, 0, false, true, 0, 0);
+        set_packet_sync_off();
+        start_transmit_mode(RfmModeTxOokPacket);
+
+        send_fixed_len_packet(packet->packet, packet->len);
+        return true;
+        break;
+
+      default:
+        ESP_LOGW(TAG, "RFM69 transmit unknown packet type %d", packet->type);
+        break;
+      }
+
+      return false;
     }
 
     void Rfm69::install_rx_interrupt()
@@ -271,6 +324,7 @@ namespace esphome
       byte irq2 = read_byte(RFM_REG_IRQ_FLAG2);
       return irq2 & 8;
     }
+
     void Rfm69::byte_out(byte b)
     {
       for (byte i = 0x80; i != 0; i = i >> 1)

@@ -38,7 +38,7 @@ static void aseer_flip_page()
   byte *pending_out = __cur_out;
   __cur_out = _buffTog ? _buffer2.data : _buffer1.data;
 
-  __cur_end = __cur_out + RFM_SENSOR_BUFFER_SIZE;
+  __cur_end = __cur_out + RFM_SENSOR_MAX_RX_BUFFER_SIZE;
   __cur_mask = 128;
   *__cur_out = 0;
 

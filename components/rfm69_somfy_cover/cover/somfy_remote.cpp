@@ -123,37 +123,18 @@ namespace esphome
       int packet_len = 66;
       frame_to_ook_packet(frame_content, packet, &packet_len);
 
-      // Bombs away
-      for (int i = 0; i < 20; i++)
+      rfm69::QueuedTxPacket tx_packet;
+      tx_packet.type = rfm69::QueuedTxPacket::RFM_TX_PACKET_TYPE_FIXED_LEN_RAW_OOK;
+      tx_packet.bitRate = 1655;
+      tx_packet.frequency = 433420000;
+      memcpy(tx_packet.packet, packet, packet_len);
+      tx_packet.len = packet_len;
+
+      for (int i = 0; i < 8; i++)
       {
-        ESP_LOGD(TAG, "Send command iteration %d: setup transmitter", i);
-        _transmitter->set_bitrate(1655);
-        _transmitter->set_frequency(433420000);
-        _transmitter->set_tx_power_level(true, 31);
-        _transmitter->set_packet_format(false, 0, false, true, 0, 0);
-        _transmitter->set_packet_sync_off();
-        _transmitter->start_transmit_mode(Rfm69::RfmModeTxOokPacket);
-
-        ESP_LOGD(TAG, "Send command iteration %d: send packet len = %d", i, packet_len + 1);
-        _transmitter->send_fixed_len_packet(packet, packet_len + 1);
-
-        ESP_LOGD(TAG, "Send command iteration %d: wait transmit done", i);
-
-        int delayIteration;
-        for (delayIteration = 0; delayIteration < 100; delayIteration++)
-        {
-          if (_transmitter->is_packet_sent())
-          {
-            break;
-          }
-
-          delay(5);
-        }
-        ESP_LOGD(TAG, "Command send complete: %d delay iterations", delayIteration);
+        ESP_LOGD(TAG, "Send command iteration %d", i);
+        _transmitter->enqueue_tx_packet(tx_packet);
       }
-
-      _transmitter->end_transmit_mode();
-      ESP_LOGD(TAG, "Transmitter in standby");
 
       increment_rolling_code();
     }

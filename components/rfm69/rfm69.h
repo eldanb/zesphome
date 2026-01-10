@@ -25,15 +25,30 @@
 
 #define RFM_SPI_DELAY 10
 
+#define RFM_SENSOR_MAX_RX_BUFFER_SIZE 16
+#define RFM_MAX_TX_PACKET_SIZE 128
+
 namespace esphome
 {
   namespace rfm69
   {
 
-#define RFM_SENSOR_BUFFER_SIZE 16
     struct QueuedPacket
     {
-      uint8_t data[RFM_SENSOR_BUFFER_SIZE];
+      uint8_t data[RFM_SENSOR_MAX_RX_BUFFER_SIZE];
+      int len;
+    };
+
+    struct QueuedTxPacket
+    {
+      enum
+      {
+        RFM_TX_PACKET_TYPE_FIXED_LEN_RAW_OOK = 0
+      } type;
+      int bitRate;
+      long frequency;
+
+      byte packet[RFM_MAX_TX_PACKET_SIZE];
       int len;
     };
 
@@ -72,7 +87,12 @@ namespace esphome
 
       bool add_radio_protocol_listener(RfmListenerProtocol protocol,
                                        std::function<void(char *data, int len)> callback);
+      void enqueue_tx_packet(const QueuedTxPacket &packet);
+
       void loop() override;
+
+    private:
+      bool tx_queued_packet(QueuedTxPacket *packet);
 
       void start_transmit_mode(RfmMode mode);
       void end_transmit_mode();
@@ -91,7 +111,6 @@ namespace esphome
       void send_fixed_len_packet(byte packet[], int len);
       bool is_packet_sent();
 
-    private:
       void resume_listening();
 
       void resume_aseer_listening();
@@ -108,6 +127,9 @@ namespace esphome
 
       RfmListenerProtocol _listenerProtocol;
       std::list<std::function<void(char *data, int len)>> _listenerCallbacks;
+
+      int _sendInProgress;
+      QueueHandle_t _pendingTxPacketsQueue;
 
       void (*_receiverInterrupt)(int state);
     };

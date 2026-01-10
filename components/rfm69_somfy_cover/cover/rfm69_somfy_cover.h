@@ -26,6 +26,7 @@ namespace esphome
       {
         auto traits = cover::CoverTraits();
         traits.set_is_assumed_state(true);
+        traits.set_supports_stop(true);
         return traits;
       }
 
