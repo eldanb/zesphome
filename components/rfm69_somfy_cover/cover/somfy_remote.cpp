@@ -12,8 +12,8 @@ namespace esphome
   {
     using rfm69::Rfm69;
 
-    SomfyRemote::SomfyRemote(Rfm69 *transmitter, long address)
-        : _transmitter(transmitter), _address(address)
+    SomfyRemote::SomfyRemote(Rfm69 *transmitter, long address, int repeat_count)
+        : _transmitter(transmitter), _address(address), _repeat_count(repeat_count)
     {
       _pref = global_preferences->make_preference<uint32_t>(_address);
       load_rolling_code();
@@ -130,7 +130,7 @@ namespace esphome
       memcpy(tx_packet.packet, packet, packet_len);
       tx_packet.len = packet_len;
 
-      for (int i = 0; i < 8; i++)
+      for (int i = 0; i < _repeat_count; i++)
       {
         ESP_LOGD(TAG, "Send command iteration %d", i);
         _transmitter->enqueue_tx_packet(tx_packet);

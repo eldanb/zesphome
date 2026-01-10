@@ -5,6 +5,7 @@
 #include <Arduino.h>
 
 #include "esphome/core/component.h"
+#include "esphome/core/automation.h"
 
 #define RFM_REG_REGOPMODE 0x01
 #define RFM_REG_REGDATAMODUL 0x02
@@ -89,6 +90,9 @@ namespace esphome
                                        std::function<void(char *data, int len)> callback);
       void enqueue_tx_packet(const QueuedTxPacket &packet);
 
+      void add_on_mode_change_callback(std::function<void()> callback);
+      RfmMode get_mode() { return _currentMode; }
+
       void loop() override;
 
     private:
@@ -125,13 +129,27 @@ namespace esphome
       int _pin_sck;
       int _pin_dio2;
 
+      RfmMode _currentMode;
       RfmListenerProtocol _listenerProtocol;
       std::list<std::function<void(char *data, int len)>> _listenerCallbacks;
+
+      std::list<std::function<void()>> _onModeChangeCallbacks;
 
       int _sendInProgress;
       QueueHandle_t _pendingTxPacketsQueue;
 
       void (*_receiverInterrupt)(int state);
     };
+
+    class ModeChangeTrigger : public Trigger<>
+    {
+    public:
+      explicit ModeChangeTrigger(Rfm69 *parent)
+      {
+        parent->add_on_mode_change_callback([this]()
+                                            { this->trigger(); });
+      }
+    };
   }
+
 }

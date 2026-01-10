@@ -15,7 +15,7 @@ namespace esphome
     class SomfyRemote
     {
     public:
-      SomfyRemote(esphome::rfm69::Rfm69 *transmitter, long address);
+      SomfyRemote(esphome::rfm69::Rfm69 *transmitter, long address, int repeat_count = 3);
       void init();
 
       enum SomfyRemoteCommand
@@ -40,6 +40,7 @@ namespace esphome
       rfm69::Rfm69 *_transmitter;
       long _address;
       long _rolling_code;
+      int _repeat_count;
       ESPPreferenceObject _pref;
     };
   }

@@ -25,7 +25,8 @@ namespace esphome
                                                                                        _pin_sck(pin_sck),
                                                                                        _pin_dio2(pin_dio2),
                                                                                        _listenerProtocol(RfmListenerProtocol::RfmListenerProtocolStandby),
-                                                                                       _sendInProgress(0)
+                                                                                       _sendInProgress(0),
+                                                                                       _currentMode(RfmMode::RfmModeStandby)
     {
       _pendingTxPacketsQueue = xQueueCreate(64, sizeof(QueuedTxPacket));
     }
@@ -107,6 +108,11 @@ namespace esphome
       resume_listening();
     }
 
+    void Rfm69::add_on_mode_change_callback(std::function<void()> callback)
+    {
+      _onModeChangeCallbacks.push_back(callback);
+    }
+
     void Rfm69::xact(bool read, byte addr, byte buff[], byte len)
     {
       digitalWrite(_pin_nss, LOW);
@@ -181,6 +187,12 @@ namespace esphome
         write_byte(RFM_REG_DIO_MAPPING1, 0x04);
         write_byte(RFM_REG_REGDATAMODUL, 0x08); // + 0 for no shaping, 1 for cutoff=BR, 2 for cutoff with 2BR
         break;
+      }
+
+      _currentMode = mode;
+      for (auto callback : _onModeChangeCallbacks)
+      {
+        callback();
       }
     }
 

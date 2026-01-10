@@ -17,8 +17,8 @@ namespace esphome
     class Rfm69SomfyCover : public cover::Cover
     {
     public:
-      Rfm69SomfyCover(rfm69::Rfm69 *rfm, unsigned long address, bool supportProg)
-          : _remote(rfm, address), _supportProg(supportProg)
+      Rfm69SomfyCover(rfm69::Rfm69 *rfm, unsigned long address, bool supportProg, int repeat_count)
+          : _remote(rfm, address, repeat_count), _supportProg(supportProg)
       {
       }
 
