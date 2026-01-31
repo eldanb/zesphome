@@ -4,8 +4,6 @@
 #include "rfm69_somfy_cover.h"
 #include "somfy_remote.h"
 
-#include <FS.h>
-
 namespace esphome
 {
   namespace rfm69_somfy_cover
@@ -26,6 +24,7 @@ namespace esphome
 
     void SomfyRemote::load_rolling_code()
     {
+      _rolling_code = 1;
       _pref.load(&_rolling_code);
     }
 
@@ -35,7 +34,7 @@ namespace esphome
       _pref.save(&_rolling_code);
     }
 
-    void SomfyRemote::compose_frame(byte ctrl, byte digitalOut[7])
+    void SomfyRemote::compose_frame(uint8_t ctrl, uint8_t digitalOut[7])
     {
       digitalOut[0] = (_rolling_code + 0x32) & 0xff;
       digitalOut[1] = ctrl << 4;
@@ -46,7 +45,7 @@ namespace esphome
       digitalOut[6] = (_address) & 0xff;
 
       // Checksum
-      byte cksum = 0;
+      uint8_t cksum = 0;
       for (int i = 0; i < 7; i++)
       {
         cksum = cksum ^ digitalOut[i] ^ (digitalOut[i] >> 4);
@@ -60,7 +59,7 @@ namespace esphome
       }
     }
 
-    void SomfyRemote::frame_to_ook_packet(byte frame[7], byte packet[], int *packet_len)
+    void SomfyRemote::frame_to_ook_packet(uint8_t frame[7], uint8_t packet[], int *packet_len)
     {
       memset(packet, 0, 66);
 
@@ -86,12 +85,12 @@ namespace esphome
   packet[bit_idx >> 3] = packet[bit_idx >> 3] | (bval) << (7 - (bit_idx & 7)); \
   bit_idx++
 
-      for (int fr_byte_idx = 0; fr_byte_idx < 7; fr_byte_idx++)
+      for (int fr_uint8_t_idx = 0; fr_uint8_t_idx < 7; fr_uint8_t_idx++)
       {
         int frbitmask = 0x80;
         for (int fr_bit_idx = 0; fr_bit_idx < 8; fr_bit_idx++)
         {
-          bool z = frame[fr_byte_idx] & frbitmask;
+          bool z = frame[fr_uint8_t_idx] & frbitmask;
           ___EMIT_OUTPUT_BIT(!z);
           ___EMIT_OUTPUT_BIT(z);
           frbitmask = frbitmask >> 1;
@@ -115,11 +114,11 @@ namespace esphome
       ESP_LOGD(TAG, "Send command %d: rolling code %d", cmd, _rolling_code);
 
       // Prepare frame
-      byte frame_content[7];
-      compose_frame((byte)cmd, frame_content);
+      uint8_t frame_content[7];
+      compose_frame((uint8_t)cmd, frame_content);
 
       // Generate OOK packet
-      byte packet[66];
+      uint8_t packet[66];
       int packet_len = 66;
       frame_to_ook_packet(frame_content, packet, &packet_len);
 
@@ -127,14 +126,13 @@ namespace esphome
       tx_packet.type = rfm69::QueuedTxPacket::RFM_TX_PACKET_TYPE_FIXED_LEN_RAW_OOK;
       tx_packet.bitRate = 1655;
       tx_packet.frequency = 433420000;
+      tx_packet.minDelay = 1;
+      tx_packet.count = _repeat_count;
       memcpy(tx_packet.packet, packet, packet_len);
       tx_packet.len = packet_len;
 
-      for (int i = 0; i < _repeat_count; i++)
-      {
-        ESP_LOGD(TAG, "Send command iteration %d", i);
-        _transmitter->enqueue_tx_packet(tx_packet);
-      }
+      ESP_LOGD(TAG, "Send command");
+      _transmitter->enqueue_tx_packet(tx_packet);
 
       increment_rolling_code();
     }

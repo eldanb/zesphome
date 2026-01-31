@@ -2,7 +2,6 @@
 
 #include <list>
 #include <functional>
-#include <Arduino.h>
 
 #include "esphome/core/component.h"
 #include "esphome/core/automation.h"
@@ -49,8 +48,11 @@ namespace esphome
       int bitRate;
       long frequency;
 
-      byte packet[RFM_MAX_TX_PACKET_SIZE];
+      uint8_t packet[RFM_MAX_TX_PACKET_SIZE];
       int len;
+
+      int minDelay;
+      int count;
     };
 
     class Rfm69 : public Component
@@ -59,9 +61,9 @@ namespace esphome
       Rfm69(int pin_miso, int pin_mosi, int pin_sck, int pin_nss, int pin_dio2);
 
       void setup() override;
-      void xact(bool read, byte addr, byte buff[], byte len);
-      void write_byte(byte addr, byte val);
-      byte read_byte(byte addr);
+      void xact(bool read, uint8_t addr, uint8_t buff[], uint8_t len);
+      void write_byte(uint8_t addr, uint8_t val);
+      uint8_t read_byte(uint8_t addr);
 
       enum RfmMode
       {
@@ -90,17 +92,13 @@ namespace esphome
                                        std::function<void(char *data, int len)> callback);
       void enqueue_tx_packet(const QueuedTxPacket &packet);
 
-      void add_on_mode_change_callback(std::function<void()> callback);
+      void add_transmit_busy_change_callback(std::function<void()> callback);
       RfmMode get_mode() { return _currentMode; }
+      bool get_transmitter_busy_state() { return _transmitterBusy; }
 
       void loop() override;
 
     private:
-      bool tx_queued_packet(QueuedTxPacket *packet);
-
-      void start_transmit_mode(RfmMode mode);
-      void end_transmit_mode();
-
       void set_mode(RfmMode mode);
       void set_packet_format(bool var_len, int dc_free, bool crc, bool crc_auto_clear, int addr_filtering, int preamble_size);
       void set_packet_sync_off();
@@ -112,16 +110,22 @@ namespace esphome
       void set_rx_bandwidth(char dcc_freq, char bandwidth_mantissa, char bandwidth_exponent);
       void set_tx_lna_parameters(int impedance, int gainSelect);
       void set_tx_power_level(bool high_power, int power);
-      void send_fixed_len_packet(byte packet[], int len);
+      void send_fixed_len_packet(uint8_t packet[], int len);
       bool is_packet_sent();
 
-      void resume_listening();
+      void start_transmit_mode(RfmMode mode);
+      void end_transmit_mode();
 
+      void resume_listening();
       void resume_aseer_listening();
       void install_rx_interrupt();
 
-      void byte_out(byte b);
-      byte byte_in();
+      bool tx_queued_packet(QueuedTxPacket *packet);
+      bool dequeue_and_tx_packet();
+      bool is_packet_sending_in_progress();
+
+      void byte_out(uint8_t b);
+      uint8_t byte_in();
 
       int _pin_miso;
       int _pin_mosi;
@@ -131,25 +135,28 @@ namespace esphome
 
       RfmMode _currentMode;
       RfmListenerProtocol _listenerProtocol;
-      std::list<std::function<void(char *data, int len)>> _listenerCallbacks;
+      bool _transmitterBusy;
 
-      std::list<std::function<void()>> _onModeChangeCallbacks;
+      std::list<std::function<void(char *data, int len)>> _listenerCallbacks;
+      std::list<std::function<void()>> _onTransmitBusyChangeCallbacks;
 
       int _sendInProgress;
+      int _sleepUntil;
+      QueuedTxPacket _currentTxPacket;
+
       QueueHandle_t _pendingTxPacketsQueue;
 
-      void (*_receiverInterrupt)(int state);
+      std::function<void(int)> _receiverInterrupt;
     };
 
-    class ModeChangeTrigger : public Trigger<>
+    class TransmitterBusyChangeTrigger : public Trigger<>
     {
     public:
-      explicit ModeChangeTrigger(Rfm69 *parent)
+      explicit TransmitterBusyChangeTrigger(Rfm69 *parent)
       {
-        parent->add_on_mode_change_callback([this]()
-                                            { this->trigger(); });
+        parent->add_transmit_busy_change_callback([this]()
+                                                  { this->trigger(); });
       }
     };
   }
-
 }

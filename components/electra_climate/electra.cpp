@@ -78,7 +78,7 @@ namespace esphome
         break;
       }
 
-      IRelectra ir_electra(nullptr);
+      IRelectra ir_electra;
       auto signal = ir_electra.generateSignal(
           power_toggle,
           electra_mode,

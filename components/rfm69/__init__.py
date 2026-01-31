@@ -30,11 +30,11 @@ from esphome.core import coroutine_with_priority
 
 CONF_RFM69_ID = "rfm69_id"
 CONF_RFM69_DIO2 = "dio2_pin"
-CONF_ON_MODE_CHANGE = "on_mode_change"
+CONF_ON_TRANSMITTER_BUSY_CHANGE = "on_transmitter_busy_change"
 
 ns = cg.esphome_ns.namespace("rfm69")
 Rfm69 = ns.class_("Rfm69", cg.Component)
-ModeChangeTrigger = ns.class_("ModeChangeTrigger", automation.Trigger.template())
+TransmitterBusyChangeTrigger = ns.class_("TransmitterBusyChangeTrigger", automation.Trigger.template())
 
 CONFIG_SCHEMA = cv.COMPONENT_SCHEMA.extend(
     {
@@ -44,10 +44,10 @@ CONFIG_SCHEMA = cv.COMPONENT_SCHEMA.extend(
         cv.Required(CONF_CLK_PIN): pins.internal_gpio_output_pin_number,
         cv.Required(CONF_CS_PIN): pins.internal_gpio_output_pin_number,        
         cv.Optional(CONF_RFM69_DIO2): pins.internal_gpio_output_pin_number,
-        cv.Optional(CONF_ON_MODE_CHANGE): cv.All(
+        cv.Optional(CONF_ON_TRANSMITTER_BUSY_CHANGE): cv.All(
                 automation.validate_automation(
                     {
-                        cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(ModeChangeTrigger),
+                        cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(TransmitterBusyChangeTrigger),
                     }
                 )
             ),
@@ -62,6 +62,6 @@ async def to_code(config):
     var = cg.Pvariable(config[CONF_ID], rhs)
     await cg.register_component(var, config)
 
-    for conf in config.get(CONF_ON_MODE_CHANGE, []):
+    for conf in config.get(CONF_ON_TRANSMITTER_BUSY_CHANGE, []):
         trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID], var)
         await automation.build_automation(trigger, [], conf)

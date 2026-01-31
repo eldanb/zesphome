@@ -14,20 +14,8 @@ using std::vector;
 #define UNIT 960
 #define NUM_BITS 34
 
-IRelectra::IRelectra(IRsend *remote) : _remote(remote)
+IRelectra::IRelectra()
 {
-}
-
-// Sends the specified configuration to the IR led
-bool IRelectra::sendElectra(bool power, IRElectraMode mode, IRElectraFan fan, int temperature, bool swing, bool sleep)
-{
-
-    auto data = generateSignal(power, mode, fan, temperature, swing, sleep);
-
-    // send using HW.
-    _remote->sendRaw(data.data(), data.size(), 33);
-
-    return true;
 }
 
 std::vector<unsigned int> IRelectra::generateSignal(bool power, IRElectraMode mode, IRElectraFan fan, int temperature, bool swing, bool sleep)

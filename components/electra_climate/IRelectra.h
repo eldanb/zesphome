@@ -11,12 +11,6 @@
 #include <stdint.h>
 #include <vector>
 
-class IRsend
-{
-public:
-    virtual void sendRaw(unsigned int *data, int dataLen, int carrierKhz) = 0;
-};
-
 typedef enum IRElectraMode
 {
     IRElectraModeCool = 0b001,
@@ -38,15 +32,12 @@ class IRelectra
 {
 public:
     // Initialize
-    IRelectra(IRsend *remote);
+    IRelectra();
 
     // Send an IR packet with the given parameters.
-    bool sendElectra(bool power, IRElectraMode mode, IRElectraFan fan, int temperature, bool swing, bool sleep);
     std::vector<unsigned int> generateSignal(bool power, IRElectraMode mode, IRElectraFan fan, int temperature, bool swing, bool sleep);
 
 private:
-    IRsend *_remote;
-
     // Encodes specific A/C configuration to a number that describes
     uint64_t encodeElectra(bool power, IRElectraMode mode, IRElectraFan fan, int temperature, bool swing, bool sleep);
 

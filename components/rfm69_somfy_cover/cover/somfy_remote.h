@@ -1,7 +1,6 @@
 #pragma once
 
 #include "esphome/core/preferences.h"
-#include <Arduino.h>
 
 namespace esphome
 {
@@ -34,8 +33,8 @@ namespace esphome
     private:
       void load_rolling_code();
       void increment_rolling_code();
-      void compose_frame(byte ctrl, byte digitalOut[7]);
-      void frame_to_ook_packet(byte frame[7], byte packet[], int *packet_len);
+      void compose_frame(uint8_t ctrl, uint8_t digitalOut[7]);
+      void frame_to_ook_packet(uint8_t frame[7], uint8_t packet[], int *packet_len);
 
       rfm69::Rfm69 *_transmitter;
       long _address;
