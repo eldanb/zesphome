@@ -13,6 +13,7 @@ RFM69SomfyCover = ns.class_("Rfm69SomfyCover", cg.Component)
 CONF_SUPPORT_PROG = "enable_prog"
 CONF_ADDRESS = "somfy_address"
 CONF_REPEAT_COUNT = "repeat_count"
+CONF_REVERSE = "reverse"
 
 CONFIG_SCHEMA = cover_schema(RFM69SomfyCover).extend(
     {
@@ -20,7 +21,8 @@ CONFIG_SCHEMA = cover_schema(RFM69SomfyCover).extend(
         cv.Required(CONF_RFM69_ID): cv.use_id(Rfm69),
         cv.Required(CONF_SUPPORT_PROG): cv.boolean,
         cv.Required(CONF_ADDRESS): cv.int_,
-        cv.Optional(CONF_REPEAT_COUNT): cv.int_
+        cv.Optional(CONF_REPEAT_COUNT): cv.int_,
+        cv.Optional(CONF_REVERSE): cv.boolean
     }
 )
 
@@ -28,6 +30,6 @@ CONFIG_SCHEMA = cover_schema(RFM69SomfyCover).extend(
 @coroutine_with_priority(80.0)
 async def to_code(config):    
     rfm69_component = await cg.get_variable(config[CONF_RFM69_ID])
-    rhs = RFM69SomfyCover.new(rfm69_component, config[CONF_ADDRESS], config[CONF_SUPPORT_PROG], config.get(CONF_REPEAT_COUNT, 2))
+    rhs = RFM69SomfyCover.new(rfm69_component, config[CONF_ADDRESS], config[CONF_SUPPORT_PROG], config.get(CONF_REPEAT_COUNT, 2), config.get(CONF_REVERSE, False))
     var = cg.Pvariable(config[CONF_ID], rhs)
     await register_cover(var, config)

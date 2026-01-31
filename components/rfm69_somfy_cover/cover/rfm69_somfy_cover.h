@@ -17,8 +17,8 @@ namespace esphome
     class Rfm69SomfyCover : public cover::Cover
     {
     public:
-      Rfm69SomfyCover(rfm69::Rfm69 *rfm, unsigned long address, bool supportProg, int repeat_count)
-          : _remote(rfm, address, repeat_count), _supportProg(supportProg)
+      Rfm69SomfyCover(rfm69::Rfm69 *rfm, unsigned long address, bool supportProg, int repeat_count, bool reverse)
+          : _remote(rfm, address, repeat_count), _supportProg(supportProg), _reverse(reverse)
       {
       }
 
@@ -47,16 +47,17 @@ namespace esphome
         }
         else if (call.get_position() == esphome::cover::COVER_OPEN)
         {
-          _remote.send_command(SomfyRemote::SomfyRemoteCommandUp, 3);
+          _remote.send_command(_reverse ? SomfyRemote::SomfyRemoteCommandDown : SomfyRemote::SomfyRemoteCommandUp, 3);
         }
         else if (call.get_position() == esphome::cover::COVER_CLOSED)
         {
-          _remote.send_command(SomfyRemote::SomfyRemoteCommandDown, 3);
+          _remote.send_command(_reverse ? SomfyRemote::SomfyRemoteCommandUp : SomfyRemote::SomfyRemoteCommandDown, 3);
         }
       }
 
       SomfyRemote _remote;
       bool _supportProg;
+      bool _reverse;
     };
   }
 }
