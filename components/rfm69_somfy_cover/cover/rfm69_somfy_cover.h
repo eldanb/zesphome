@@ -47,12 +47,16 @@ namespace esphome
         }
         else if (call.get_position() == esphome::cover::COVER_OPEN)
         {
+          position = esphome::cover::COVER_OPEN;
           _remote.send_command(_reverse ? SomfyRemote::SomfyRemoteCommandDown : SomfyRemote::SomfyRemoteCommandUp, 3);
         }
         else if (call.get_position() == esphome::cover::COVER_CLOSED)
         {
+          position = esphome::cover::COVER_CLOSED;
           _remote.send_command(_reverse ? SomfyRemote::SomfyRemoteCommandUp : SomfyRemote::SomfyRemoteCommandDown, 3);
         }
+
+        publish_state();
       }
 
       SomfyRemote _remote;
