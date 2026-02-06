@@ -37,11 +37,14 @@ namespace esphome
         if (call.get_position() == esphome::cover::COVER_OPEN)
         {
           _remote.send_command_for_duration(PelliniRemote::PelliniRemoteCommandUp, 800);
+          position = esphome::cover::COVER_OPEN;
         }
         else if (call.get_position() == esphome::cover::COVER_CLOSED)
         {
           _remote.send_command_for_duration(PelliniRemote::PelliniRemoteCommandDown, 2500);
+          position = esphome::cover::COVER_CLOSED;
         }
+        publish_state();
       }
 
       PelliniRemote _remote;
