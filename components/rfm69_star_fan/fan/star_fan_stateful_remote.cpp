@@ -140,8 +140,8 @@ namespace esphome
           433920000,
           {},
           packet_len,
-          1,
-          6,
+          0,
+          5,
       };
       memcpy(tx_packet.packet, packet, packet_len);
       _transmitter->enqueue_tx_packet(tx_packet);

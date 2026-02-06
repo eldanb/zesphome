@@ -55,6 +55,8 @@ namespace esphome
     void Rfm69StarFanLightSwitch::write_state(bool state)
     {
       this->parent_->set_light(state);
+      this->state = state;
+      publish_state(state);
     }
 
     void Rfm69StarFanResetButton::press_action()

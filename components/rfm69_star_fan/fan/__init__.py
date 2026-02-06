@@ -46,4 +46,5 @@ async def to_code(config):
     
     b = await button.new_button(config.get(CONF_RESET_BUTTON))
     await cg.register_parented(b, config.get(CONF_ID))
+    cg.add(var.set_reset_button(b))
     
